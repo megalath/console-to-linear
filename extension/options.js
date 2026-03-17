@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   linearProjectId: "",
   linearLabelIds: "",
   linearAssigneeId: "",
+  captureUrlFilter: "",
   linearDedupeWindowMinutes: 60,
   linearDedupeIncludeQuery: false,
   networkHttpErrorStatusMin: 500,
@@ -118,6 +119,7 @@ function readForm() {
     linearProjectId: document.getElementById("linearProjectId").value.trim(),
     linearLabelIds: document.getElementById("linearLabelIds").value.trim(),
     linearAssigneeId: document.getElementById("linearAssigneeId").value.trim(),
+    captureUrlFilter: document.getElementById("captureUrlFilter").value.trim(),
     linearDedupeWindowMinutes: Number(document.getElementById("linearDedupeWindowMinutes").value || DEFAULT_SETTINGS.linearDedupeWindowMinutes),
     linearDedupeIncludeQuery: document.getElementById("linearDedupeIncludeQuery").checked,
     networkHttpErrorStatusMin: Number(document.getElementById("networkHttpErrorStatusMin").value || DEFAULT_SETTINGS.networkHttpErrorStatusMin),
@@ -135,6 +137,7 @@ function writeForm(settings) {
   document.getElementById("linearProjectId").value = settings.linearProjectId || "";
   document.getElementById("linearLabelIds").value = settings.linearLabelIds || "";
   document.getElementById("linearAssigneeId").value = settings.linearAssigneeId || "";
+  document.getElementById("captureUrlFilter").value = settings.captureUrlFilter || "";
   document.getElementById("linearDedupeWindowMinutes").value = settings.linearDedupeWindowMinutes ?? DEFAULT_SETTINGS.linearDedupeWindowMinutes;
   document.getElementById("linearDedupeIncludeQuery").checked = Boolean(settings.linearDedupeIncludeQuery);
   document.getElementById("networkHttpErrorStatusMin").value = settings.networkHttpErrorStatusMin ?? DEFAULT_SETTINGS.networkHttpErrorStatusMin;

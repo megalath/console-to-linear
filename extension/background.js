@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   linearProjectId: "",
   linearLabelIds: "",
   linearAssigneeId: "",
+  captureUrlFilter: "",
   linearDedupeWindowMinutes: 60,
   linearDedupeIncludeQuery: false,
   networkHttpErrorStatusMin: 500,
@@ -79,6 +80,10 @@ async function handleMessage(message, sender) {
 async function handleCapture(payload, sender) {
   const settings = await getSettings();
   const record = buildRecord(payload, sender, settings);
+
+  if (!matchesUrlFilter(record, settings.captureUrlFilter)) {
+    return { skipped: true, reason: "url-filter" };
+  }
 
   if (
     record.kind === "network" &&
@@ -492,6 +497,7 @@ function normalizeSettings(settings) {
     authMethod: settings.authMethod === "apiKey" ? "apiKey" : "oauth",
     autoCreateLinear: Boolean(settings.autoCreateLinear),
     linearDedupeIncludeQuery: Boolean(settings.linearDedupeIncludeQuery),
+    captureUrlFilter: String(settings.captureUrlFilter || "").trim(),
     networkHttpErrorStatusMin: Number(
       settings.networkHttpErrorStatusMin ||
         DEFAULT_SETTINGS.networkHttpErrorStatusMin,
@@ -678,6 +684,29 @@ function safeUrlHost(value) {
   } catch {
     return value || "unknown-page";
   }
+}
+
+function matchesUrlFilter(record, captureUrlFilter) {
+  const filters = String(captureUrlFilter || "")
+    .split(/[\n,]+/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (filters.length === 0) {
+    return true;
+  }
+
+  const haystacks = [
+    record.pageUrl,
+    record.pageRoute,
+    record.requestUrl,
+    record.requestRoute,
+    record.routeKey
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+
+  return filters.some((filter) => haystacks.some((value) => value.includes(filter)));
 }
 
 async function createPkceChallenge(codeVerifier) {

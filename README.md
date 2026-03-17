@@ -30,6 +30,7 @@ Use this if you want native browser capture without launching Chrome in remote-d
 - Extension folder: `extension/`
 - Popup: export JSONL, clear local log, open settings
 - Options page: configure Linear OAuth or API-key auth, auto-create, and capture thresholds
+- URL filter: limit capture to a hostname, route fragment, or other URL substring
 
 ## Files
 
