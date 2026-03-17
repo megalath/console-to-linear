@@ -1,0 +1,9 @@
+{
+  "name": "chrome-console-linear-logger",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "chrome:launch": "./launch-chrome-debug.sh",
+    "logger": "node ./chrome-console-logger.mjs"
+  }
+}

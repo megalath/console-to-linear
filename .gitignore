@@ -1,0 +1,6 @@
+.env
+.chrome-debug-profile/
+logs/
+diagnostics/
+.DS_Store
+*.swp

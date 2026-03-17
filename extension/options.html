@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chrome Console Logger Options</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="options">
+    <main class="shell shell-wide">
+      <section class="hero">
+        <p class="eyebrow">Options</p>
+        <h1>Capture and Linear settings</h1>
+        <p class="muted">This extension stores records locally in Chrome and can export them as JSONL. Auto-creating Linear issues is optional.</p>
+      </section>
+
+      <form id="settings-form" class="form">
+        <div class="auth-panel">
+          <div class="section-head">
+            <h2>Linear authentication</h2>
+            <span id="auth-badge" class="pill">Disconnected</span>
+          </div>
+
+          <div class="grid">
+            <label>
+              <span>Auth method</span>
+              <select id="authMethod" name="authMethod">
+                <option value="oauth">OAuth (recommended)</option>
+                <option value="apiKey">API key</option>
+              </select>
+            </label>
+
+            <label id="oauth-client-wrap">
+              <span>Linear OAuth client ID</span>
+              <input id="linearOauthClientId" name="linearOauthClientId" type="text" autocomplete="off">
+            </label>
+
+            <label id="api-key-wrap">
+              <span>Linear API key</span>
+              <input id="linearApiKey" name="linearApiKey" type="password" autocomplete="off">
+            </label>
+          </div>
+
+          <p class="muted helper">
+            Add the redirect URL below to your Linear OAuth app, then click Connect.
+          </p>
+          <code id="redirect-uri" class="inline-code"></code>
+
+          <div class="actions">
+            <button id="connect-button" type="button">Connect with Linear</button>
+            <button id="disconnect-button" type="button" class="secondary">Disconnect</button>
+          </div>
+
+          <p id="auth-summary" class="muted"></p>
+          <div id="team-buttons" class="chip-row"></div>
+        </div>
+
+        <label class="toggle">
+          <input id="autoCreateLinear" name="autoCreateLinear" type="checkbox">
+          <span>Automatically create Linear issues for new fingerprints</span>
+        </label>
+
+        <div class="grid">
+          <label>
+            <span>Linear team ID</span>
+            <input id="linearTeamId" name="linearTeamId" type="text" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Linear state ID</span>
+            <input id="linearStateId" name="linearStateId" type="text" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Linear project ID</span>
+            <input id="linearProjectId" name="linearProjectId" type="text" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Linear label IDs</span>
+            <input id="linearLabelIds" name="linearLabelIds" type="text" placeholder="uuid-one,uuid-two" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Linear assignee ID</span>
+            <input id="linearAssigneeId" name="linearAssigneeId" type="text" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Dedupe window (minutes)</span>
+            <input id="linearDedupeWindowMinutes" name="linearDedupeWindowMinutes" type="number" min="1" step="1">
+          </label>
+
+          <label class="toggle boxed">
+            <input id="linearDedupeIncludeQuery" name="linearDedupeIncludeQuery" type="checkbox">
+            <span>Include query strings in dedupe keys</span>
+          </label>
+
+          <label>
+            <span>Capture HTTP status from</span>
+            <input id="networkHttpErrorStatusMin" name="networkHttpErrorStatusMin" type="number" min="400" max="599" step="1">
+          </label>
+
+          <label>
+            <span>Stored records cap</span>
+            <input id="maxRecords" name="maxRecords" type="number" min="25" step="25">
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Save settings</button>
+          <button id="reset-button" type="button" class="secondary">Reset defaults</button>
+        </div>
+      </form>
+
+      <p id="save-status" class="muted"></p>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

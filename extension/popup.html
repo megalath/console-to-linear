@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chrome Console Logger</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="popup">
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Chrome Console Logger</p>
+        <h1>Captured browser errors</h1>
+        <p id="status-text" class="muted">Loading...</p>
+      </section>
+
+      <section class="actions">
+        <button id="export-button" type="button">Export JSONL</button>
+        <button id="clear-button" type="button" class="secondary">Clear log</button>
+        <button id="options-button" type="button" class="secondary">Options</button>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Latest events</h2>
+          <span id="linear-status" class="pill">Linear off</span>
+        </div>
+        <div id="records-list" class="records"></div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
