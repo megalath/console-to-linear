@@ -25,6 +25,7 @@ const authBadge = document.getElementById("auth-badge");
 const authSummary = document.getElementById("auth-summary");
 const redirectUri = document.getElementById("redirect-uri");
 const teamButtons = document.getElementById("team-buttons");
+const extensionVersion = document.getElementById("extension-version");
 let latestState = null;
 
 initialize().catch((error) => {
@@ -98,6 +99,8 @@ disconnectButton.addEventListener("click", async () => {
 });
 
 async function initialize() {
+  const manifest = chrome.runtime.getManifest();
+  extensionVersion.textContent = `Version ${manifest.version}`;
   redirectUri.textContent = chrome.identity.getRedirectURL("linear");
   const result = await chrome.runtime.sendMessage({ type: "get-state" });
   if (!result?.ok) {
