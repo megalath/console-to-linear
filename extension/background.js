@@ -27,6 +27,8 @@ const EMPTY_LINEAR_AUTH = {
   lastError: ""
 };
 
+const inflightLinearCreates = new Map();
+
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get([
     "settings",
@@ -258,6 +260,30 @@ async function maybeCreateLinearIssue(settings, record) {
     return { skipped: true, reason: "missing-auth" };
   }
 
+  const inflightKey = `${settings.linearTeamId}:${record.fingerprint}`;
+  if (inflightLinearCreates.has(inflightKey)) {
+    return inflightLinearCreates.get(inflightKey);
+  }
+
+  const pending = maybeCreateLinearIssueInner(
+    settings,
+    record,
+    authorization,
+  );
+  inflightLinearCreates.set(inflightKey, pending);
+
+  try {
+    return await pending;
+  } finally {
+    inflightLinearCreates.delete(inflightKey);
+  }
+}
+
+async function maybeCreateLinearIssueInner(
+  settings,
+  record,
+  authorization,
+) {
   const dedupeWindowMs =
     Number(
       settings.linearDedupeWindowMinutes ||
@@ -271,6 +297,21 @@ async function maybeCreateLinearIssue(settings, record) {
 
   if (lastSeen && now - lastSeen < dedupeWindowMs) {
     return { skipped: true, reason: "duplicate" };
+  }
+
+  const existingIssue = await findExistingLinearIssue(
+    authorization,
+    settings.linearTeamId,
+    record,
+  );
+  if (existingIssue) {
+    linearDedupe[record.fingerprint] = now;
+    await chrome.storage.local.set({ linearDedupe });
+    return {
+      skipped: true,
+      reason: "existing-issue",
+      existingIssue
+    };
   }
 
   const input = {
@@ -322,6 +363,49 @@ async function maybeCreateLinearIssue(settings, record) {
   linearDedupe[record.fingerprint] = now;
   await chrome.storage.local.set({ linearDedupe });
   return { created: true, ...issue };
+}
+
+async function findExistingLinearIssue(authorization, teamId, record) {
+  const query = `
+    query ExistingIssue($teamId: String!, $title: String!) {
+      issues(
+        first: 10
+        filter: {
+          team: { id: { eq: $teamId } }
+          title: { eq: $title }
+        }
+      ) {
+        nodes {
+          id
+          identifier
+          title
+          url
+          description
+          state {
+            type
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await callLinearGraphQL({
+    authorization,
+    query,
+    variables: {
+      teamId,
+      title: makeLinearTitle(record)
+    }
+  });
+
+  const nodes = Array.isArray(data.data?.issues?.nodes)
+    ? data.data.issues.nodes
+    : [];
+
+  return (
+    nodes.find((issue) => isActiveDuplicateIssue(issue, record)) ||
+    null
+  );
 }
 
 async function buildLinearAuthFromTokenResponse(tokenResponse) {
@@ -684,6 +768,21 @@ function safeUrlHost(value) {
   } catch {
     return value || "unknown-page";
   }
+}
+
+function isActiveDuplicateIssue(issue, record) {
+  const stateType = String(issue?.state?.type || "").toLowerCase();
+  if (stateType === "completed" || stateType === "canceled") {
+    return false;
+  }
+
+  const description = String(issue?.description || "");
+  const fingerprintToken = `Fingerprint: \`${record.fingerprint}\``;
+
+  return (
+    issue?.title === makeLinearTitle(record) &&
+    description.includes(fingerprintToken)
+  );
 }
 
 function matchesUrlFilter(record, captureUrlFilter) {
