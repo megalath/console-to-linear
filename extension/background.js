@@ -635,6 +635,10 @@ function buildRecord(payload, sender, settings) {
       typeof payload?.responseStatus === "number" ? payload.responseStatus : null,
     responseStatusText: payload?.responseStatusText || "",
     networkErrorText: payload?.networkErrorText || "",
+    errorType: payload?.errorType || "",
+    filename: payload?.filename || "",
+    lineno: payload?.lineno || 0,
+    colno: payload?.colno || 0,
     tabId: sender?.tab?.id ?? null,
     tabWindowId: sender?.tab?.windowId ?? null
   };
@@ -658,9 +662,20 @@ function makeLinearTitle(record) {
     )}`;
   }
 
-  return `Frontend error on ${
-    record.pageRoute || safeUrlHost(record.pageUrl)
-  }: ${truncateText(oneLine(record.message), 88)}`;
+  const page = record.pageRoute || safeUrlHost(record.pageUrl);
+  const msg = oneLine(record.message);
+
+  // For opaque/CORS errors, include the source file in the title for differentiation
+  if (record.errorType === "CrossOriginOrOpaque" && record.filename) {
+    try {
+      const fileName = new URL(record.filename).pathname.split("/").pop() || record.filename;
+      return `Frontend error on ${page}: ${truncateText(msg, 60)} [${truncateText(fileName, 24)}]`;
+    } catch {
+      // fall through to default
+    }
+  }
+
+  return `Frontend error on ${page}: ${truncateText(msg, 88)}`;
 }
 
 function makeLinearDescription(record) {
@@ -692,11 +707,35 @@ function makeLinearDescription(record) {
   if (record.networkErrorText) {
     parts.push(`- Network error: ${record.networkErrorText}`);
   }
+  if (record.errorType) {
+    parts.push(`- Error type: ${record.errorType}`);
+  }
+  if (record.filename) {
+    parts.push(`- Source file: ${record.filename}`);
+  }
+  if (record.lineno) {
+    parts.push(`- Location: line ${record.lineno}${record.colno ? `:${record.colno}` : ""}`);
+  }
 
   parts.push("", "## Message", "```text", record.message || "(empty)", "```");
 
   if (record.stack) {
     parts.push("", "## Stack", "```text", record.stack, "```");
+  }
+
+  // Add troubleshooting hints for opaque errors
+  if (record.errorType === "CrossOriginOrOpaque") {
+    parts.push(
+      "",
+      "## Troubleshooting",
+      "This error was captured without a full stack trace (browser stripped it due to CORS).",
+      "",
+      "**To get full details:**",
+      "1. Add `crossorigin` attribute to any `<script>` tags loading from CDNs",
+      "2. Ensure the server sends `Access-Control-Allow-Origin` headers for script resources",
+      "3. Check the browser DevTools console on the page above — the full error should be visible there",
+      `4. The error originates near \`${record.filename || "(unknown)"}:${record.lineno || "?"}:${record.colno || "?"}\``
+    );
   }
 
   return parts.join("\n");
@@ -710,7 +749,11 @@ function fingerprintFor(record) {
     record.responseStatus ?? "",
     oneLine(record.networkErrorText),
     oneLine(record.message),
-    oneLine(record.stack)
+    oneLine(record.stack),
+    // Include filename/line so different errors on the same page get different fingerprints
+    record.filename || "",
+    record.lineno || "",
+    record.colno || ""
   ].join("\n");
 
   let hash = 2166136261;
