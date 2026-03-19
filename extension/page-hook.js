@@ -25,22 +25,50 @@
   window.addEventListener(
     "error",
     (event) => {
+      // Skip known harmless browser noise
+      const msg = event.error?.message || event.message || "";
+      if (isHarmlessError(msg)) {
+        return;
+      }
+
+      // When event.error exists, we have the real Error object (same-origin script)
+      // When it's null, the browser stripped it (CORS / "Script error")
+      const hasRealError = event.error instanceof Error;
+      const message = hasRealError
+        ? event.error.message
+        : (event.message && event.message !== "Script error." && event.message !== "Script error")
+          ? event.message
+          : buildContextualMessage(event);
+      const stack = hasRealError
+        ? (event.error.stack || "")
+        : formatLocation(event.filename, event.lineno, event.colno);
+
       emit({
         kind: "exception",
         source: "window.error",
-        message: event.error?.message || event.message || "Window error",
-        stack: event.error?.stack || formatLocation(event.filename, event.lineno, event.colno)
+        message,
+        stack,
+        errorType: hasRealError ? (event.error.name || "Error") : "CrossOriginOrOpaque",
+        filename: event.filename || "",
+        lineno: event.lineno || 0,
+        colno: event.colno || 0
       });
     },
     true
   );
 
   window.addEventListener("unhandledrejection", (event) => {
+    const msg = formatValue(event.reason);
+    if (isHarmlessError(msg)) {
+      return;
+    }
+
     emit({
       kind: "exception",
       source: "window.unhandledrejection",
-      message: formatValue(event.reason),
-      stack: extractStack(event.reason)
+      message: msg,
+      stack: extractStack(event.reason),
+      errorType: event.reason instanceof Error ? (event.reason.name || "Error") : "UnknownRejection"
     });
   });
 
@@ -212,5 +240,52 @@
       return "";
     }
     return `${fileName}:${lineNumber || 0}:${columnNumber || 0}`;
+  }
+
+  /**
+   * Build a more useful message when the browser gives us "Script error" / null error.
+   * We include the location info so different errors on the same page get different fingerprints.
+   */
+  function buildContextualMessage(event) {
+    const parts = ["Uncaught error (cross-origin or opaque)"];
+    if (event.filename) {
+      // Extract just the filename/path portion for readability
+      try {
+        const url = new URL(event.filename);
+        parts.push(`in ${url.pathname.split("/").pop() || url.pathname}`);
+      } catch {
+        parts.push(`in ${event.filename}`);
+      }
+    }
+    if (event.lineno) {
+      parts.push(`at line ${event.lineno}${event.colno ? `:${event.colno}` : ""}`);
+    }
+    return parts.join(" ");
+  }
+
+  /**
+   * Filter out known harmless browser errors that aren't real bugs.
+   */
+  function isHarmlessError(message) {
+    if (!message) return false;
+    const msg = String(message);
+    const HARMLESS_PATTERNS = [
+      // Browser resize observer noise
+      "ResizeObserver loop",
+      // Extension errors from other extensions
+      "chrome-extension://",
+      "moz-extension://",
+      // React dev-only warnings (not real errors)
+      "Warning: ",
+      // Network errors already captured by fetch/XHR hooks
+      "Failed to fetch",
+      "NetworkError when attempting to access",
+      "Load failed",
+      // Browser permission prompts
+      "NotAllowedError",
+      // Canceled navigation
+      "AbortError",
+    ];
+    return HARMLESS_PATTERNS.some(pattern => msg.includes(pattern));
   }
 })();
